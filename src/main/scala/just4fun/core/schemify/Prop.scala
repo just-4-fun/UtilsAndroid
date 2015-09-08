@@ -15,7 +15,7 @@ class Prop[O, T] protected[schemify](val schema: SchemaType[O])(implicit val typ
 		case true => (o, v) => ()
 	}
 
-	def config(code: schema.P[O, T] => Unit): schema.P[O, T] = {code(this.asInstanceOf[schema.P[O,T]]); this.asInstanceOf[schema.P[O,T]]}
+	def config(code: this.type => Unit): this.type = {code(this); this}
 
 	def apply(v: Any): T = typ.eval(v)
 	def copy(v: T, deep: Boolean = false): T = typ.copy(v, deep)

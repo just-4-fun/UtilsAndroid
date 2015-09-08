@@ -47,8 +47,8 @@ class SchemifyMacro(val c: Context) {
 	//	val ASBASE_x = "asBase"
 	val IMPLIMAP_x = "impliMap"
 	val OptionRx = """Option\[.*""".r
-
-
+	
+	
 	/* AUTO SCHEMA */
 	/** TODO is possible to publish new Schema as implicit value ? */
 	def genAutoSchema[T: c.WeakTypeTag]: c.Tree = /*measureTime("GEN")*/ {
@@ -73,18 +73,18 @@ class SchemifyMacro(val c: Context) {
 		val fullName = s"${classOf[AutoSchema[_]].getName}[$pearlNm]"
 		val props = propMap.values
 		val buff = new StringBuilder
-		buff.append( s"$PROPTYPECLS.$IMPLIMAP_x.getOrElseUpdate(classOf[${pearlT}], ")
+		buff.append(s"$PROPTYPECLS.$IMPLIMAP_x.getOrElseUpdate(classOf[${pearlT}], ")
 		buff.append(s"new $fullName {\n")
 		props.foreach { p => buff.append(s"val ${p.name} = $PROP_x[${p.typ}]\n") }
 		buff.append(genCode(props, pearlNm, pearlT))
 		buff.append("\n}")
 		buff.append(s").asInstanceOf[$fullName]")
 		val code = buff.toString()
-//		print(s"CODE\n$code")
+		//		print(s"CODE\n$code")
 		c.parse(code)
 	}
-
-
+	
+	
 	/* ANNOTATED SCHEMA */
 	def genSchema(annottees: c.Tree*): c.Tree = /*measureTime("MAIN")*/ {
 		val args = extractMacroArgs()
@@ -99,9 +99,9 @@ class SchemifyMacro(val c: Context) {
 		q"..$newTree"
 		//		q"..$annottees"
 	}
-
-
-
+	
+	
+	
 	//	def toSymbol(typTree: c.Tree): Symbol = {
 	//		extractType(typTree).symbol
 	//	}
@@ -130,29 +130,30 @@ class SchemifyMacro(val c: Context) {
 	//		val q"..$_ val $_: ${tpt: c.Tree} = $_" = newTree
 	//		tpt
 	//	}
-
+	
 	def genCode(props: Iterable[PropBaseX], pearlTa: String, pearlT: Type, isConctrete: Boolean = true, genConstr: Boolean = true, args: MacroArgs = MacroArgsDefault): String = {
 		val str = new StringBuilder
-		str append s"override lazy protected[this] val $SCHEMIFIED_x = true\n"
+		str ++= s"override lazy protected[this] val $SCHEMIFIED_x = true\n"
 		props.foreach {
 			case p: PROPX => val nm = p.name
-				str append s"""$nm.$NAME_x = "$nm"; """
-				str append s"$nm.$GETTER_x = (obj) => obj.${p.getter.get}; "
-				if (p.setter.nonEmpty) str append s"$nm.$SETTER_x = (obj, v) => obj.${p.setter.get}(v)\n"
-				else str append s"$nm.$SETTER_x = (obj, v) => ()\n"
+				str ++= s"""$nm.$NAME_x = "$nm"; """
+				str ++= s"$nm.$GETTER_x = (obj) => obj.${p.getter.get}; "
+				if (p.setter.nonEmpty) str ++= s"$nm.$SETTER_x = (obj, v) => obj.${p.setter.get}(v)\n"
+				else str ++= s"$nm.$SETTER_x = (obj, v) => ()\n"
 			case p: STUBX => val nm = p.name
-				str append s"""$nm.$NAME_x = "$nm"\n"""
+				str ++= s"""$nm.$NAME_x = "$nm"\n"""
 		}
 		if (isConctrete) {
 			val constrSym = constructorSym(pearlT)
-			if (genConstr) {str append genConstructor(pearlT, constrSym)}
-			str append genConstructFromVals(props, pearlT, constrSym)
-			str append genCopyObject(props, pearlT, constrSym)
-		} else str.append("\n{}\n")
+			if (genConstr) {str ++= genConstructor(pearlT, constrSym)}
+			str ++= genConstructFromVals(props, pearlT, constrSym)
+			str ++= genCopyObject(props, pearlT, constrSym)
+		} else str ++= "\n{}\n"
 		//		str append genGetValuesArray(props, pearlTa)
 		//		str append genGetValuesMap(props, pearlTa)
 		//		str append genSetValuesArray(props, pearlTa)
 		//		str append genSetValuesMap(props, pearlTa)
+		//		print(s"CODE: $str}")
 		str.toString()
 	}
 	def genConstructor(pearlT: Type, constrSym: MethodSymbol): String = {
@@ -160,10 +161,10 @@ class SchemifyMacro(val c: Context) {
 		val text = new StringBuilder
 		constrSym.paramLists.foreach { params =>
 			val pps = params
-			  .withFilter{ p => !p.asTerm.isParamWithDefault && !p.asTerm.isImplicit }
+			  .withFilter { p => !p.asTerm.isParamWithDefault && !p.asTerm.isImplicit }
 			  .map(p => s"${p.name}=${defaultValue(p.info.toString)}")
 			  .mkString(",")
-//			val pps = params.withFilter(!_.asTerm.isParamWithDefault).map(p => s"${p.name}=${defaultValue(p.info.toString)}").mkString(",")
+			//			val pps = params.withFilter(!_.asTerm.isParamWithDefault).map(p => s"${p.name}=${defaultValue(p.info.toString)}").mkString(",")
 			text.append("(")
 			if (pps.length > 0) text.append(pps)
 			text.append(")")
@@ -251,7 +252,7 @@ class SchemifyMacro(val c: Context) {
 	//		//		print(s"setValsArray code\n${str}")
 	//		str.toString()
 	//	}
-
+	
 	//	def genGetValuesMap(props: Iterable[PropBaseX], pearlT: String): String = {
 	//		val str = new StringBuilder
 	//		str.append(s"override def $GETFROMMAP_x(obj: $pearlT) = if (obj == null) null else collection.mutable.HashMap[String, Any](")
@@ -270,8 +271,13 @@ class SchemifyMacro(val c: Context) {
 	//		str.append(s"\n$NEWFROMVALS_x(values)\n}\n")
 	//		str.toString()
 	//	}
-
-	def constructorSym(pearlT: Type) = pearlT.members.find(s => s.isConstructor && s.asMethod.isPrimaryConstructor).get.asMethod
+	
+	def constructorSym(pearlT: Type) = {
+		pearlT.members.find(s => s.isConstructor && s.asMethod.isPrimaryConstructor) match {
+			case Some(c) => c.asMethod
+			case None => throw new Exception(s"${pearlT} constructor not found.")
+		}
+	}
 	def defaultValue(typ: String): String = typ match {
 		case "String" => "null"
 		case "Long" | "Int" | "Double" | "Float" | "Short" | "Byte" | "Char" => "0"
@@ -333,13 +339,13 @@ class SchemifyMacro(val c: Context) {
 		}
 		result
 	}
-
-
-
-
-
+	
+	
+	
+	
+	
 	/* CLASSES */
-
+	
 	class SchemaInfo(val tree: ImplDef, args: MacroArgs) {
 		var pearlT: c.Tree = _
 		var pearlTyp: Type = _
@@ -352,20 +358,23 @@ class SchemifyMacro(val c: Context) {
 				case s => s
 			}
 		} catch {case e: Throwable => /*print(s"Error $e");*/ null}
-		val parentsList = thisSym match {
-			case null => Nil
+		var (hierarchies, parentsList) = thisSym match {
+			case null => (Nil, Nil)
 			//			case null => val parentSym = toSymbol(tree.impl.parents.head)
 			//				collectParents(parentSym, Nil).reverse // head is Schema; last is parentSym
-			case _ => collectParents(thisSym, Nil).reverse
+			case _ => collectHierarchies()
 		}
+//		print (s"hierarchies::    >> : ${hierarchies}")
+//		print (s"parentsList::    >> : ${parentsList}")
 		if (thisSym != null && parentsList.nonEmpty) {
+			//			print(s"PARENTS: ${parentsList.map(p => symInfo(p)).mkString("  ->  ")}")
 			collectProps()
 			detectPearl()
 			scanPearl()
-			//			print(s"PEARL thisSym= $thisSym;  Ta= $pearlT;  Typ= $pearlTyp;${if (props.nonEmpty) "\nPROPS " + props.mkString(", ") else ""}\nCHAIN\n${parentsList.map(p => symInfo(p)).mkString("  ->  ")}")
+//			print(s"PEARL thisSym= $thisSym;  Ta= $pearlT;  Typ= $pearlTyp;${if (props.nonEmpty) "\nPROPS " + props.mkString(", ") else ""}\nCHAIN\n${parentsList.map(p => symInfo(p)).mkString("  ->  ")}")
 		}
-
-
+		
+		
 		def newDef: c.Tree = if (thisSym == null) tree
 		else {
 			val code = genCode(props, pearlT.toString(), pearlTyp, isConcrete, genConstructor, args)
@@ -375,8 +384,37 @@ class SchemifyMacro(val c: Context) {
 				case ModuleDef(mods, nm, Template(parents, self, body)) => ModuleDef(mods, nm, Template(parents, self, body ::: lines))
 			}
 		}
+		def collectHierarchies(): (List[List[Symbol]], List[Symbol]) = {
+			var hierarchies = List[List[Symbol]]()
+			//collectParents(thisSym, Nil).reverse.distinct
+			def collectParents(s: Symbol, parents: List[Symbol], top: Boolean = false): List[Symbol] = s match {
+				case SCHSYM => s :: parents
+				case _ => var baseClasses = s.asType.toType.baseClasses.tail
+					baseClasses.foreach {
+						_.asType.toType.baseClasses.tail.foreach { c =>
+							baseClasses = baseClasses.filterNot(_ == c)
+						}
+					}
+					baseClasses.map(collectParents(_, parents)).filter(_.nonEmpty) match {
+						case Nil => parents
+						case resultLists =>
+							if (top) hierarchies = resultLists.map(list => (s :: list).reverse).reverse
+							s :: resultLists.flatten
+					}
+			}
+			//
+			val parentsList = collectParents(thisSym, Nil, true).reverse.distinct
+			(hierarchies, parentsList)
+		}
 		def detectPearl() = {
-			checkPair(parentsList)
+			var typ: Type = null
+			hierarchies.foreach{h =>
+//				print(s"CHK H >> $h")
+				paramIndex = 0
+				checkPair(h)
+				if (typ != null && !(pearlTyp =:= typ)) abort(s"Schema ancestors have different type parameters: $typ and $pearlTyp.")
+				else typ = pearlTyp
+			}
 			//			if (pearlTyp == null) pearlTyp = toType(pearlT)
 		}
 		def symInfo(s: Symbol) = {
@@ -390,8 +428,8 @@ class SchemifyMacro(val c: Context) {
 					val subTyp = sub.asType.toType
 					val subCls = sub.asClass
 					val upParam = upCls.typeParams(paramIndex)
-					val upT = upParam.asType.toType
-					val seenT = upT.asSeenFrom(subTyp, upCls)
+					val upParamT = upParam.asType.toType
+					val seenT = upParamT.asSeenFrom(subTyp, upCls)
 					pearlT = q"$seenT"
 					pearlTyp = subCls.typeParams.collectFirst {
 						case param if param.asType.toType =:= seenT =>
@@ -401,7 +439,7 @@ class SchemifyMacro(val c: Context) {
 						case Some(p) => p
 						case None => paramIndex = -1; seenT
 					}
-					//				print(s"PAIR SUB= $subCls;  UP= $upCls;  upT= $upT;  pearlT= $pearlT;  pearlTyp= $pearlTyp; index= $paramIndex")
+//										print(s"PAIR SUB= $subCls;  UP= $upCls;  upParams[$paramIndex]= $upParamT;  pearlT= $pearlT;  pearlTyp= $pearlTyp")
 					checkPair(parents.tail)
 				}
 			//			case up :: Nil if thisSym == null && paramIndex >= 0 => // TODO  Last pair if thisType glitches
@@ -450,15 +488,7 @@ class SchemifyMacro(val c: Context) {
 		//			val q"..$_ val $_: ${tpt: c.Tree} = $_" = newTree
 		//			tpt
 		//		}
-
-		def collectParents(s: Symbol, parents: List[Symbol]): List[Symbol] = s match {
-			case SCHSYM => s :: parents
-			case _ => val clsSym = s.asType.toType.baseClasses.tail.view.map(collectParents(_, parents)).find(_.nonEmpty)
-				clsSym match {
-					case Some(list) => s :: list
-					case None => parents
-				}
-		}
+		
 		def collectProps() = parentsList.tail.foreach { parent =>
 			parent.asType.toType.decls.sorted.withFilter(d => d.isTerm).withFilter { d =>
 				val t = d.asTerm
@@ -494,7 +524,7 @@ class SchemifyMacro(val c: Context) {
 		//			case DefDef(mods, TermName(INST_x), tparams, vparamss, tpt, rhs) => hasConstructor = true
 		//			case _ => //print(s"??? $tree")
 		//		}
-
+		
 		def scanPearl() = {
 			val err = new StringBuilder
 			val warn = new StringBuilder
@@ -540,8 +570,8 @@ class SchemifyMacro(val c: Context) {
 			if (warn.nonEmpty) print(s"Props warnings:\n$warn")
 			if (err.nonEmpty) abort(err.toString())
 		}
-
-
+		
+		
 		lazy val name: Name = tree.name
 		lazy val body: List[c.Tree] = tree.impl.body
 		lazy val isSchema = thisSym == null || parentsList.nonEmpty
@@ -556,14 +586,14 @@ class SchemifyMacro(val c: Context) {
 			case com => thisSym.isModuleClass && pearlTyp.typeSymbol == com
 		}
 		lazy val isSingleton = tree match {case t: ClassDef => false; case _ => true}
-
+		
 	}
-
-
-
-
-
-
+	
+	
+	
+	
+	
+	
 	trait PropBaseX {
 		val index: Int
 		val name: String
@@ -587,5 +617,5 @@ class SchemifyMacro(val c: Context) {
 		val typ = typeOf[Null]
 		val stub = true
 	}
-
+	
 }

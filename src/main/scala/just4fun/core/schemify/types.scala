@@ -1,7 +1,6 @@
 package just4fun.core.schemify
 
-import just4fun.utils.devel.ILogger
-import ILogger._
+import just4fun.utils.logger.Logger._
 
 import scala.collection.mutable.ArrayBuffer
 import scala.language.experimental.macros
@@ -529,6 +528,6 @@ abstract class SchemaType[T: Manifest] extends FormattedType[T] {
 
 
 	private[schemify] def throwError(extraMsg: String = null) = throw new IllegalStateException(
-		s"Schema ${getClass.getName} should be annotated with @${classOf[Schemify].getName}." + (if (extraMsg == null) "" else s" Or $extraMsg")
+		s"Schema ${getClass.getName} should be annotated with @${classOf[Schemify].getName}. ${if (extraMsg == null) "Or check that macros are enabled" else s"Or $extraMsg"}."
 	)
 }

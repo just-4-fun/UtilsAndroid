@@ -3,7 +3,7 @@ lazy val utils = project.in(file("."))
   .settings(commonSettings: _*)
   .settings(testSettings: _*)
   .settings(paradiseSettings: _*)
-  .settings(dependencies)
+  .settings(dependencies: _*)
 
 lazy val commonSettings = Seq(
 	name := "utils"
@@ -29,6 +29,7 @@ lazy val paradiseSettings = Seq(
 
 lazy val dependencies = Seq(
 	libraryDependencies += "com.fasterxml.jackson.core" % "jackson-core" % "2.5.1"
+	, libraryDependencies += "just4fun" %% "logger" % "1.0-SNAPSHOT"
 )
 
 // link this project via:
